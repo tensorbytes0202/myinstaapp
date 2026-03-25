@@ -6,6 +6,9 @@ from app.db.base import Base
 from app.users.models import User
 from app.posts.models import Post
 from app.follow.models import Follow
+from app.likes.models import Like
+from app.comments.models import Comment  # ✅ Add this
+from app.notifications.models import Notification
 
 
 async def create_tables():

@@ -1,0 +1,81 @@
+User
+↓
+User app se HTTP request backend ko bhejta hai.
+
+FastAPI API
+↓
+FastAPI request receive karke correct route handler ko forward karta hai.
+
+Pydantic validation
+↓
+Request data ko validate karta hai (type, required fields, format).
+
+Service layer
+↓
+Business logic execute karta hai (user create, post save, etc.).
+
+SQLAlchemy ORM
+↓
+Python objects ko SQL queries me convert karta hai.
+
+PostgreSQL database
+↓
+Data permanently database tables me store ya retrieve hota hai.
+
+RabbitMQ queue
+↓
+Background tasks ke messages queue me store karta hai.
+
+Celery workers
+↓
+Queue se task uthakar background me process execute karte hain.
+
+Redis cache
+↓
+Frequently used data ko fast access ke liye memory me store karta hai.
+
+----------------------------------------------------------------------------------------------------------
+
+
+                +-------------+
+                |  Frontend   |
+                | Next.js     |
+                +-------------+
+                       |
+                       v
+               API Gateway
+                       |
+      ---------------------------------
+      |        |        |             |
+      v        v        v             v
+
+  Auth svc  Post svc  Feed svc  Notification svc
+      |        |        |             |
+      ---------------------------------
+                     |
+                     v
+                Message Queue
+                (Kafka / SQS)
+
+                     |
+                     v
+            Media Processing Service
+               (image/video)
+
+                     |
+                     v
+                Storage (S3)
+
+DB Layer
+---------------------------------
+
+Users DB        Posts DB
+(MongoDB)       (MongoDB)
+
+Feed Cache
+Redis
+
+Search
+Elasticsearch
+
+---------------------------------------------------------------------------------------------------
