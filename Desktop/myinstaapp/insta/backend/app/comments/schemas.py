@@ -5,10 +5,8 @@ class CommentCreate(BaseModel):
     post_id: int
     text: str
 
-
 class CommentUpdate(BaseModel):
     text: str
-
 
 class CommentResponse(BaseModel):
     id: int
@@ -20,7 +18,6 @@ class CommentResponse(BaseModel):
     
     class Config:
         from_attributes = True
-
 
 class CommentCount(BaseModel):
     post_id: int

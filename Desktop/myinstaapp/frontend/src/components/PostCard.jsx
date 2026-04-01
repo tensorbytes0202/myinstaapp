@@ -1,146 +1,118 @@
-import React, { useState } from "react";
-import { comments as commentService } from "../api/services";
+import React, { useState, useEffect } from "react";
+import { likes, comments } from "../api/service";
 
 const PostCard = ({ post, onLike, onUnlike }) => {
-  const [showComments, setShowComments] = useState(false);
-  const [postComments, setPostComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-  const [commentsLoading, setCommentsLoading] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [commentsList, setCommentsList] = useState([]);
 
+  // 🔹 Fetch comments when opened
   const fetchComments = async () => {
     try {
-      setCommentsLoading(true);
-      const response = await commentService.getComments(post.id);
-      setPostComments(response);
+      const res = await comments.getComments(post.id);
+      setCommentsList(res.comments || res);
     } catch (err) {
       console.error("Error fetching comments:", err);
-    } finally {
-      setCommentsLoading(false);
     }
   };
 
-  const handleToggleComments = async () => {
-    if (!showComments) {
-      await fetchComments();
+  // 🔹 Toggle Like
+  const handleLikeToggle = async () => {
+    try {
+      if (liked) {
+        await likes.unlikePost(post.id);
+        setLikesCount((prev) => Math.max(prev - 1, 0));
+        onUnlike && onUnlike();
+      } else {
+        await likes.likePost(post.id);
+        setLikesCount((prev) => prev + 1);
+        onLike && onLike();
+      }
+      setLiked(!liked);
+    } catch (err) {
+      console.error("Like error:", err);
     }
-    setShowComments(!showComments);
   };
 
+  // 🔹 Add Comment
   const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+    if (!commentText.trim()) return;
 
     try {
-      const comment = await commentService.createComment(post.id, newComment);
-      setPostComments([comment, ...postComments]);
-      setNewComment("");
+      const newComment = await comments.createComment(post.id, commentText);
+
+      setCommentsList((prev) => [...prev, newComment]);
+      setCommentText("");
     } catch (err) {
-      console.error("Error creating comment:", err);
+      console.error("Comment error:", err);
     }
   };
 
-  const handleLikeClick = () => {
-    if (liked) {
-      onUnlike();
-      setLiked(false);
-    } else {
-      onLike();
-      setLiked(true);
-    }
+  // 🔹 Open comments
+  const toggleComments = () => {
+    setShowComments(!showComments);
+    if (!showComments) fetchComments();
   };
 
   return (
     <div className="post-card">
-      {/* Post Header */}
+      {/* 🔹 Header */}
       <div className="post-header">
-        <div className="user-info">
-          <div className="avatar">👤</div>
-          <div className="user-details">
-            <p className="username">User {post.user_id}</p>
-            <p className="timestamp">
-              {new Date(post.created_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
+        <strong>{post.username || "User"}</strong>
       </div>
 
-      {/* Post Image */}
+      {/* 🔹 Image */}
       <div className="post-image">
-        <img src={post.image_url} alt={post.caption} />
+        <img
+          src={post.image_url}
+          alt="post"
+          style={{ width: "100%", borderRadius: "8px" }}
+        />
       </div>
 
-      {/* Post Actions */}
+      {/* 🔹 Actions */}
       <div className="post-actions">
-        <button
-          className={`action-btn like-btn ${liked ? "liked" : ""}`}
-          onClick={handleLikeClick}
-        >
-          ❤️ Like
+        <button onClick={handleLikeToggle}>
+          {liked ? "❤️ Unlike" : "🤍 Like"}
         </button>
-        <button
-          className="action-btn comment-btn"
-          onClick={handleToggleComments}
-        >
-          💬 Comment
+
+        <button onClick={toggleComments}>
+          💬 Comments
         </button>
-        <button className="action-btn share-btn">📤 Share</button>
       </div>
 
-      {/* Likes and Comments Count */}
-      <div className="post-stats">
-        <p>
-          <strong>{post.likes_count}</strong> likes
-        </p>
-        <p>
-          <strong>{post.comments_count}</strong> comments
-        </p>
-      </div>
+      {/* 🔹 Likes Count */}
+      <p><strong>{likesCount}</strong> likes</p>
 
-      {/* Post Caption */}
-      <div className="post-caption">
-        <p>
-          <strong>User {post.user_id}</strong> {post.caption}
-        </p>
-      </div>
+      {/* 🔹 Caption */}
+      <p>
+        <strong>{post.username}</strong> {post.caption}
+      </p>
 
-      {/* Comments Section */}
+      {/* 🔹 Comments Section */}
       {showComments && (
         <div className="comments-section">
-          <div className="comments-list">
-            {commentsLoading ? (
-              <p>Loading comments...</p>
-            ) : postComments.length === 0 ? (
-              <p>No comments yet</p>
-            ) : (
-              postComments.map((comment) => (
-                <div key={comment.id} className="comment">
-                  <p>
-                    <strong>User {comment.user_id}</strong> {comment.text}
-                  </p>
-                  <p className="comment-time">
-                    {new Date(comment.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
+          <h4>Comments</h4>
 
-          {/* Add Comment Form */}
+          {commentsList.length === 0 && <p>No comments yet</p>}
+
+          {commentsList.map((c, index) => (
+            <p key={index}>
+              <strong>{c.username || "User"}:</strong> {c.text}
+            </p>
+          ))}
+
+          {/* 🔹 Add Comment */}
           <div className="add-comment">
             <input
               type="text"
               placeholder="Add a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleAddComment();
-                }
-              }}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
             />
-            <button onClick={handleAddComment} disabled={!newComment.trim()}>
-              Post
-            </button>
+            <button onClick={handleAddComment}>Post</button>
           </div>
         </div>
       )}

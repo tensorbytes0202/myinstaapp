@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { auth, follow } from "../api/services";
+import { auth, follow, posts } from "../api/service";
 
 const Profile = ({ userId }) => {
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [userPosts, setUserPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
 
@@ -16,11 +17,26 @@ const Profile = ({ userId }) => {
       setLoading(true);
       setError(null);
 
-      const response = await auth.getProfile(userId);
-      setProfile(response);
+      const userData = await auth.getProfile(userId);
+      const postsData = await posts.getUserPosts(userId);
+
+      console.log("Profile:", userData);
+      console.log("Posts:", postsData);
+
+      setProfile(userData);
+
+      // Handle posts response safely
+      if (Array.isArray(postsData)) {
+        setUserPosts(postsData);
+      } else if (postsData.posts) {
+        setUserPosts(postsData.posts);
+      } else {
+        setUserPosts([]);
+      }
+
     } catch (err) {
-      setError(err.message);
-      console.error("Error fetching profile:", err);
+      console.error("Profile Error:", err);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -30,16 +46,14 @@ const Profile = ({ userId }) => {
     try {
       await follow.followUser(userId);
       setIsFollowing(true);
-      
-      // Update follower count
-      if (profile) {
-        setProfile({
-          ...profile,
-          followers_count: profile.followers_count + 1,
-        });
-      }
+
+      // update UI instantly
+      setProfile((prev) => ({
+        ...prev,
+        followers_count: (prev.followers_count || 0) + 1,
+      }));
     } catch (err) {
-      console.error("Error following user:", err);
+      console.error("Follow error:", err);
     }
   };
 
@@ -49,7 +63,7 @@ const Profile = ({ userId }) => {
 
   return (
     <div className="profile-container">
-      {/* Profile Header */}
+      {/* Header */}
       <div className="profile-header">
         <div className="profile-avatar">
           <div className="avatar-large">👤</div>
@@ -60,51 +74,51 @@ const Profile = ({ userId }) => {
 
           <div className="profile-stats">
             <div className="stat">
-              <p className="stat-value">{profile.posts_count}</p>
-              <p className="stat-label">Posts</p>
+              <p>{userPosts.length}</p>
+              <p>Posts</p>
             </div>
+
             <div className="stat">
-              <p className="stat-value">{profile.followers_count}</p>
-              <p className="stat-label">Followers</p>
+              <p>{profile.followers_count}</p>
+              <p>Followers</p>
             </div>
+
             <div className="stat">
-              <p className="stat-value">{profile.following_count}</p>
-              <p className="stat-label">Following</p>
+              <p>{profile.following_count}</p>
+              <p>Following</p>
             </div>
           </div>
 
           <div className="profile-actions">
             <button
-              className={`follow-btn ${isFollowing ? "following" : ""}`}
               onClick={handleFollowClick}
               disabled={isFollowing}
             >
               {isFollowing ? "Following" : "Follow"}
             </button>
-            <button className="message-btn">Message</button>
+
+            <button>Message</button>
           </div>
         </div>
       </div>
 
-      {/* User Posts */}
+      {/* Posts */}
       <div className="user-posts">
         <h2>Posts</h2>
 
-        {profile.posts && profile.posts.length === 0 ? (
-          <p className="no-posts">No posts yet</p>
+        {userPosts.length === 0 ? (
+          <p>No posts yet</p>
         ) : (
           <div className="posts-grid">
-            {profile.posts &&
-              profile.posts.map((post) => (
-                <div key={post.id} className="post-grid-item">
-                  <img src={post.image_url} alt={post.caption} />
-                  <div className="post-overlay">
-                    <p>
-                      ❤️ {post.likes_count} | 💬 {post.comments_count}
-                    </p>
-                  </div>
+            {userPosts.map((post) => (
+              <div key={post.id} className="post-grid-item">
+                <img src={post.image_url} alt="" />
+
+                <div className="post-overlay">
+                  ❤️ {post.likes_count || 0} | 💬 {post.comments_count || 0}
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         )}
       </div>
